@@ -40,7 +40,7 @@ vector<double> get_data(vector<double> row) {
 
 vector<double> get_data(vector<double> row, vector<unsigned int> features) {
     vector<double> ret;
-    for(int i = 1; i < row.size(); ++i) {
+    for(unsigned int i = 1; i < row.size(); ++i) {
         if (contains(features, i)) {
             ret.push_back(row[i]);
         } else {
@@ -74,11 +74,13 @@ double euclidean_distance(vector<double> train, vector<double> test){
     return sqrt(sum);
 }
 
-double cross_val(vector<vector<double> > in, vector<unsigned int> feature_set, int feature_to_add, const int rows, const int cols){
+double cross_val(vector<vector<double> > in, vector<unsigned int> feature_set, unsigned int feature_to_add, const int rows, const int cols){
     int correct_count = 0;
     double a = 0;
     double nearest_neighbor_dist = std::numeric_limits<double>::max();
     double current_dist = std::numeric_limits<double>::max();
+    vector<unsigned int> new_feature_set = feature_set;
+    new_feature_set.push_back(feature_to_add);
     int obj_to_classify;
     int nearest_neighbor_label = -1;
     vector<double> test_row_features;
@@ -86,11 +88,11 @@ double cross_val(vector<vector<double> > in, vector<unsigned int> feature_set, i
     for(int i = 0; i < rows; ++i) {             // test (checking if the prediction would have been correct for this point)
         nearest_neighbor_dist = std::numeric_limits<double>::max(); // setting the inital distance to infinity (essentially)
         obj_to_classify = in[i][0];
-        test_row_features = get_data(in[i], feature_set);
+        test_row_features = get_data(in[i], new_feature_set);
 
 
         for (int k = 0; k < rows; ++k) {        // train (checking for nearest neighbor)
-            train_row_features = get_data(in[k]);
+            train_row_features = get_data(in[k], new_feature_set);
             // cout << "Checking if item " << k << " is the nearest neighbor to item " << i << endl;
             if(i == k) continue; // skips if train and test row are the same
             
