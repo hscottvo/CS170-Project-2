@@ -1,27 +1,59 @@
+#include <iostream>
 #include <string>
 #include <fstream>
 #include <sstream>
 #include <vector>
-#include <unordered_set>
+#include <algorithm>
 #include <limits>
-#include <iostream>
 #include <math.h>
+
 using namespace std;
 
+template <typename T>
 
-double cross_val(const vector<vector<double> >& in, int rows, int cols, 
-                 unordered_set<int> curr_features, int added_feature);
+// https://thispointer.com/c-test-check-if-a-value-exist-in-vector/
+bool contains(vector<T> vec, const T & elem)
+{
+    bool result = false;
+    if( find(vec.begin(), vec.end(), elem) != vec.end() )
+    {
+        result = true;
+    }
+    return result;
+}
 
-struct features_acc {
-    unordered_set<int> features;
-    double acc = 0;
-};
+template <typename T>
+void print(vector<T> vec, bool endline){
+    for(unsigned int i = 0; i < vec.size(); ++i) {
+        cout << vec[i] << ' ';
+    }
+    if (endline) cout << endl;
+}
+
+vector<double> get_data(vector<double> row) {
+    vector<double> ret;
+    for(int i = 1; i < row.size(); ++i) {
+        ret.push_back(row[i]);
+    }
+    return ret;
+}
+
+vector<double> get_data(vector<double> row, vector<unsigned int> features) {
+    vector<double> ret;
+    for(int i = 1; i < row.size(); ++i) {
+        if (contains(features, i)) {
+            ret.push_back(row[i]);
+        } else {
+            ret.push_back(0);
+        }
+    }
+    return ret;
+}
 
 vector<double> parse_line(string& in) {
     vector<double> out;
     stringstream ss(in);
     string curr;
-    // cout << in << endl;
     while(true) {
         if (ss >> curr){
             out.push_back(stod(curr));
@@ -34,76 +66,82 @@ vector<double> parse_line(string& in) {
     return out;    
 }
 
-void feature_search(const vector<vector<double> >& in, int rows, int cols){
-    unordered_set<int> feature_set = {};
-    // https://thispointer.com/different-ways-to-iterate-over-a-set-in-c/
-    for (int i = 1; i < cols; ++i) {
-        cout << "Level " << i << endl;
-        int this_level_feature = 0;
-        double max_acc = 0;
-
-        for (int k = 1; k < cols; ++k) {
-            double accuracy = 0;
-            // https://www.techiedelight.com/check-element-present-set-cpp/
-            if (feature_set.find(k) == feature_set.end()){
-                cout << "\tConsidering adding feature " << k << endl;
-                accuracy = cross_val(in, rows, cols, feature_set, k);
-            }
-            if (accuracy > max_acc) {
-                max_acc = accuracy;
-                this_level_feature = k;
-            }
-        }
-        feature_set.insert(this_level_feature);
-        cout << "On level " << i << " added feature " << this_level_feature << " to current set." << endl;
+double euclidean_distance(vector<double> train, vector<double> test){
+    double sum = 0;
+    for(size_t i = 0; i < train.size(); ++i) {
+        sum += (train[i] - test[i]) * (train[i] - test[i]);
     }
-    // return {feature_set, max_acc};
+    return sqrt(sum);
 }
 
-double cross_val(const vector<vector<double> >& in, int rows, int cols, 
-                 unordered_set<int> curr_features, int added_feature){
-    vector<vector<double> > curr_table;
-    for(int i = 1; i < cols; ++i) {
-        if (curr_features.find(i) != curr_features.end()){
-                curr_table.push_back(in[i]);
+double cross_val(vector<vector<double> > in, vector<unsigned int> feature_set, int feature_to_add, const int rows, const int cols){
+    int correct_count = 0;
+    double a = 0;
+    double nearest_neighbor_dist = std::numeric_limits<double>::max();
+    double current_dist = std::numeric_limits<double>::max();
+    int obj_to_classify;
+    int nearest_neighbor_label = -1;
+    vector<double> test_row_features;
+    vector<double> train_row_features;
+    for(int i = 0; i < rows; ++i) {             // test (checking if the prediction would have been correct for this point)
+        nearest_neighbor_dist = std::numeric_limits<double>::max(); // setting the inital distance to infinity (essentially)
+        obj_to_classify = in[i][0];
+        test_row_features = get_data(in[i], feature_set);
+
+
+        for (int k = 0; k < rows; ++k) {        // train (checking for nearest neighbor)
+            train_row_features = get_data(in[k]);
+            // cout << "Checking if item " << k << " is the nearest neighbor to item " << i << endl;
+            if(i == k) continue; // skips if train and test row are the same
+            
+            current_dist = euclidean_distance(train_row_features, test_row_features);
+            if (current_dist < nearest_neighbor_dist) {
+                nearest_neighbor_dist = current_dist;
+                nearest_neighbor_label = in[k][0];
+            }
+            ++a;
+        }
+    // cout << "Object " << i << " should be class " << nearest_neighbor_label << endl;
+        if (obj_to_classify == nearest_neighbor_label) {
+            correct_count++;
         }
     }
-    cols = curr_table.size();
+    return (float)correct_count / (float)rows;
+}
 
-    int num_correct = 0;
 
-    for (int i = 0; i < rows; ++i) {
-        vector<double> object_to_classify = in[i];
-        int object_label = in[i][0];
-        double nearest_neighbor_distance = numeric_limits<double>::max();
-        int nearest_neighbor_label = 0;
-        for (int k = 0; k < rows; ++k) {
-            if (k != i) {
-                double sum = 0;
-                for (int a = 0; a < cols; a++) {
-                    sum += (object_to_classify[a] - curr_table[k][a]) * (object_to_classify[a] - curr_table[k][a]);
-                }
-                double dist = sqrt(sum);
+void feature_search(vector<vector<double> > in, const int rows, const int cols){
+    vector<unsigned int> feature_set;
 
-                if (dist < nearest_neighbor_distance) {
-                    nearest_neighbor_distance = dist;
-                    nearest_neighbor_label = curr_table[k][0];
-                }
+    for(unsigned int i = 1; i < cols; i++){
+        // cout << "On the " << i << "th level of the search tree" << endl;
+        int feature_to_add = -1;
+        double best_so_far_acc = 0;
+        double acc = 0;
+        for (unsigned int k = 1; k < cols; k++) {
+            if (contains(feature_set, k)) {
+                continue;
+                // cout << "this should not print" << endl;
+            }
+            cout << "\tConsidering adding the " << k << "th feature, seeing if ";
+            print(feature_set, false);
+            cout << k << " works" << endl;
+            acc = cross_val(in, feature_set, k+1, rows, cols);
+            cout << "acc " << acc << endl;
+
+            if (acc > best_so_far_acc) {
+                best_so_far_acc = acc;
+                feature_to_add = k;
             }
         }
-        if (object_label == nearest_neighbor_label){
-            num_correct++;
-        }
+
+        feature_set.push_back(feature_to_add);
+        cout << "On level " << i << ", added feature " << feature_to_add << " to current set" << endl;
+        // print(feature_set, true);
+
     }
-    cout << "With features ";
-    for(auto const &n: curr_features) {
-        cout << n << ", ";
-    }
-    cout << "and adding " << added_feature<< ": " << endl;
-    double accuracy = num_correct / rows;
-    cout << accuracy << endl;
-    return accuracy;
 }
+
 
 int main(int argc, char** argv)
 {

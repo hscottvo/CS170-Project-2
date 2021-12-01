@@ -10,7 +10,7 @@ def is_valid_file(parser, arg):
     if not os.path.exists(arg):
         parser.error("The file %s does not exist!" % arg)
     else:
-        return pd.read_csv('Ver_2_CS170_Fall_2021_Small_data__65.txt', header=None, delim_whitespace=True)  # return an open file handle
+        return pd.read_csv(arg, header=None, delim_whitespace=True)  # return an open file handle
 
 
 
