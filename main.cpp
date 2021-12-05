@@ -9,10 +9,10 @@
 
 using namespace std;
 
-template <typename T>
+// template <typename T>
 
 // https://thispointer.com/c-test-check-if-a-value-exist-in-vector/
-bool contains(vector<T>& vec, const T & elem)
+bool contains(vector<unsigned int>& vec, const unsigned int & elem)
 {
     bool result = false;
     if( find(vec.begin(), vec.end(), elem) != vec.end() )
