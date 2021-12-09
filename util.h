@@ -5,10 +5,10 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <math.h>
 
 using namespace std;
 
-// https://thispointer.com/c-test-check-if-a-value-exist-in-vector/
 bool contains(unordered_set<unsigned int>& s, const unsigned int & elem)
 {
     bool result = false;
@@ -88,7 +88,35 @@ vector<double> parse_line(string& in) {
     return out;    
 }
 
-double euclidean_distance(vector<vector<double> >& data, unsigned int i, unsigned int k, unordered_set<unsigned int> feature_set, unsigned int new_feature){
+void parse_logs(vector<unordered_set<unsigned int> >& features_in, vector<double>& accs_in, string& string_in){
+    stringstream ss(string_in);
+    string curr;
+    ss >> curr;
+    accs_in.push_back(stod(curr.substr(0, curr.size()-1)));
+    unordered_set<unsigned int> out;
+    while(true){
+        if (ss >> curr) {
+            if (curr != "empty_set,"){
+                if (curr.find(',') != std::string::npos){
+                curr = curr.substr(0, curr.size()-1);
+                }
+                if (curr != "") {
+                    out.insert(stoi(curr));
+                }
+                // out.insert(stoi(curr));
+            }
+            // out.insert(stoi(curr));
+            // cout << curr.substr(0, curr.size()-1) << ' ';
+        } else {
+            break;
+        }
+        
+    }
+    features_in.push_back(out);
+    // cout << endl;
+}
+
+double euclidean_distance_add(vector<vector<double> >& data, unsigned int i, unsigned int k, unordered_set<unsigned int> feature_set, unsigned int new_feature){
     
     double sum = 0;
     double a = 0;
@@ -102,4 +130,29 @@ double euclidean_distance(vector<vector<double> >& data, unsigned int i, unsigne
     return sqrt(sum);
 }
 
+double euclidean_distance_sub(vector<vector<double> >& data, unsigned int i, unsigned int k, unordered_set<unsigned int> feature_set, unsigned int new_feature){
+    
+    double sum = 0;
+    double a = 0;
+    double b = 0;
+    for(size_t j = 1; j < data[0].size(); ++j) {
+        if (contains(feature_set, j)){
+            sum += (data[i][j] - data[k][j]) * (data[i][j] - data[k][j]);
+        }
+    }
+    sum -= (data[i][new_feature] - data[k][new_feature]) * (data[i][new_feature] - data[k][new_feature]);
+    return sqrt(sum);
+}
+
+double euclidean_distance(vector<vector<double> >& data, unsigned int i, unsigned int k, unordered_set<unsigned int> feature_set){
+    double sum = 0;
+    double a = 0;
+    double b = 0;
+    for(size_t j = 1; j < data[0].size(); ++j) {
+        if (contains(feature_set, j)){
+            sum += (data[i][j] - data[k][j]) * (data[i][j] - data[k][j]);
+        }
+    }
+    return sqrt(sum);
+}
 #endif
