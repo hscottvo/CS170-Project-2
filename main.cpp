@@ -7,6 +7,9 @@
 #include <unordered_set>
 #include <math.h>
 #include <signal.h>
+#include <array>
+#include <charconv>
+#include <iomanip>
 
 #include "util.h"
 
@@ -17,14 +20,18 @@ vector<unordered_set<unsigned int> > feature_list;
 vector<double> feature_accs;
 string prefix;    
 string filename;
+float rounding_precision;
+int decimals;
 
 void write_file(){
     ofstream outfile(prefix + filename + "_logs.csv");
     // cout << "Filename: " << filename << endl;
     cout << "Saving logs... " << endl;
     for(unsigned int i = 0; i < feature_list.size(); ++i) { 
+        stringstream ss;
         // cout << "\tAccuracy: " << feature_accs[i] << " with features ";
-        outfile << to_string(feature_accs[i]) << ", ";
+        ss << std::fixed << std::setprecision(decimals) << floor(feature_accs[i] * rounding_precision) / rounding_precision;
+        outfile << ss.str() << ", ";
         if (feature_list[i].size()) {
             // print(feature_list[i], true);
             outfile << tostring(feature_list[i]) << ", " << endl;
@@ -38,15 +45,6 @@ void write_file(){
     }
     outfile.close();
 }
-
-void signal_callback_handler(int signum) {
-   cout << "Caught signal " << signum << endl;
-   // Terminate program
-   write_file();
-   exit(signum);
-}
-
-
 
 
 double cross_val_forward(vector<vector<double> >& in, unordered_set<unsigned int>& feature_set, unsigned int feature_to_add, const int rows, const int cols){
@@ -93,7 +91,7 @@ double cross_val_forward(vector<vector<double> >& in, unordered_set<unsigned int
             correct_count++;
         }
     }
-    return correct_count / (float)rows;
+    return floor((correct_count / (float)rows) * rounding_precision) / rounding_precision;
 }
 
 double cross_val_backward(vector<vector<double> >& in, unordered_set<unsigned int>& feature_set, unsigned int feature_to_remove, const int rows, const int cols){
@@ -142,7 +140,7 @@ double cross_val_backward(vector<vector<double> >& in, unordered_set<unsigned in
             correct_count++;
         }
     }
-    return correct_count / (float)rows;
+    return floor((correct_count / (float)rows) * rounding_precision) / rounding_precision;
 }
 
 
@@ -255,7 +253,6 @@ void feature_search_backward(vector<vector<double> >& in, const int rows, const 
 
 int main(int argc, char** argv)
 {
-    signal(SIGINT, signal_callback_handler);
 	if (argc > 4) {
         cout << "Incorrect number of arguments. Exiting..." << endl;
         exit(1);
@@ -285,6 +282,8 @@ int main(int argc, char** argv)
     int rows = table.size();
     int cols = table[0].size();
     cout << "This dataset has " << cols-1 << " features (not including the class attribute), with " << rows << " instances." << endl; 
+    decimals = floor(log10(rows));
+    rounding_precision = pow(10, decimals);
     string comp;
     if(argc == 3) {
         comp = argv[2];
